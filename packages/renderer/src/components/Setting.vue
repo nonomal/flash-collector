@@ -12,14 +12,15 @@
     （2）访问 <a
       @click="shell.openExternal('https://greasyfork.org/zh-CN/scripts/444989-flash-collector-for-4399')">GreasyFork
     脚本页面</a> 或 <a
-      @click="shell.openExternal('https://github.com/Cnotech/flash-collector/raw/master/userscript/flash-collector-script.user.js')">GitHub
+      @click="shell.openExternal('https://github.com/Cnotech/flash-collector/raw/master/user-script/flash-collector-script.user.js')">GitHub
     仓库脚本直链</a>，安装脚本。
   </a-card>
   <br/>
   <a-card title="启动浏览器">
     <a-space direction="vertical">
-      <p>Flash Collector 在本地运行游戏可能需要浏览器的支持，请参考我们提供的<a
-          @click="shell.openExternal('https://github.com/Cnotech/flash-collector#浏览器兼容性')">浏览器兼容性表格</a>选择游戏的启动浏览器</p>
+      <p>在本地运行游戏可能需要浏览器对相应小游戏播放插件的支持，请参考我们提供的<a
+          @click="shell.openExternal('https://github.com/Cnotech/flash-collector#浏览器兼容性')">浏览器兼容性表格</a>选择启动浏览器：
+      </p>
       <a-space>
         <span style="margin-right: 12.5px">Flash：</span>
         <a-select v-model:value="browser.flash.name" :options="flashBrowserList" class="browser-selector"
@@ -43,9 +44,12 @@
   <br/>
   <a-card title="智能嗅探">
     <a-space direction="vertical">
-      <p>此功能可以帮助下载异步加载的在线小游戏，启用后当您使用“源站播放”时 Flash Collector 会监听浏览器的资源请求并将请求的文件下载到本地</p>
-      <p>需要浏览器支持 Chrome DevTools Protocol 才能进行嗅探，嗅探过程中浏览器可能会卡顿</p>
-      <p>注意：嗅探过程中请尽可能游玩全部关卡以保证缺失的文件被嗅探全面；如果嗅探结束后仍不能在本地正确播放说明这个 Flash 可能在异步策略中增加了校验策略，建议还是在线玩</p>
+      <p>此功能可以帮助下载异步加载的 Flash 小游戏，启用后当您使用“源站播放”时 Flash Collector
+        会监听浏览器的资源请求并将请求的文件下载到本地。</p>
+      <small>注意：</small>
+      <small>1、需要浏览器实现 Chrome DevTools Protocol （CDP） 才能进行嗅探，嗅探过程中浏览器可能会卡顿。</small>
+      <small>2、嗅探过程中请尽可能游玩全部关卡以保证缺失的文件被嗅探全面；如果嗅探结束后仍不能在本地正确播放说明这个 Flash
+        可能使用了站点防盗用策略，建议还是在线玩😥。</small>
       <a-switch v-model:checked="smartSniffing.enable" checked-children="启用" un-checked-children="关闭"
                 @change="checkSmartSniffing"/>
       <a-space v-if="smartSniffing.enable" size="large">
@@ -64,26 +68,40 @@
   </a-card>
   <br/>
   <a-card title="自动备份进度">
-    <p>在启动游戏时自动备份上次游戏进度，若频繁出错请<a @click="shell.openExternal('https://github.com/Cnotech/flash-collector/issues')">提交
-      issue </a>然后暂时关闭此功能</p>
+    <p>在启动游戏时自动备份上次游戏进度，若频繁出错请<a
+        @click="shell.openExternal('https://github.com/Cnotech/flash-collector/issues')">提交
+      issue </a>然后暂时关闭此功能。</p>
     <a-switch v-model:checked="enableProgressBackup" checked-children="启用" un-checked-children="禁用"/>
   </a-card>
   <br/>
   <a-card title="运行库检查">
-    <p>在启动游戏时自动检查相应运行库是否已经安装，若有误报请关闭</p>
+    <p>在启动游戏时自动检查相应运行库是否已经安装，若频繁出错请<a
+        @click="shell.openExternal('https://github.com/Cnotech/flash-collector/issues')">提交
+      issue </a>然后暂时关闭此功能。</p>
     <a-switch v-model:checked="libCheck" checked-children="启用" un-checked-children="禁用"/>
   </a-card>
   <br/>
   <a-card title="搜索引擎">
+    <p>自定义首页搜索框所使用的搜索引擎。</p>
     <a-space>
       <a-select v-model:value="site" :options="siteOptions" style="width: 120px"></a-select>
       <a-select v-model:value="method" :options="methodOptions" style="width: 140px"></a-select>
     </a-space>
   </a-card>
   <br/>
+  <a-card title="游戏服务端口">
+    若出现端口冲突导致无法在浏览器中访问本地游戏服务器请尝试修改端口，但是注意更改端口可能会导致丢失游戏进度！
+    <br/><br/>
+    <a-space>
+      <a-input v-model:value="port" style="width: 100%"/>
+      <a-button :type="oldPort==port?'default':'primary'" @click="restart">立即应用</a-button>
+    </a-space>
+  </a-card>
+  <br/>
   <a-card title="许可与条款">
-    此软件免费获取并在 <a @click="shell.openExternal('https://github.com/Cnotech/flash-collector')">Cnotech/flash-collector</a> 以
-    MPL-2.0 协议开源，如果您拥有 GitHub 账号欢迎点个 Star 来表示鼓励；如果您是通过付费的方式获得的请立即申请退款并差评卖家。
+    此软件免费获取并在 <a @click="shell.openExternal('https://github.com/Cnotech/flash-collector')">Cnotech/flash-collector</a>
+    以
+    MPL-2.0 协议开源，如果您拥有 GitHub 账号欢迎点个 Star ⭐️ 来表示鼓励；如果您是通过付费的方式获得的请立即申请退款并差评卖家。
     <br/><br/>
     使用此软件及其相关内容即表示您同意下述条款：
     <br/>
@@ -94,15 +112,6 @@
     （3）本软件及其仓库是 Flash Collector 字样及下图所示图标（渐变绿底FC字）的最早使用者，任何个人或组织未经授权不得使用相关字样或图标。
     <br/><br/>
     <img alt="Icon" src="../assets/favicon.ico" style="height: 50px;width: 50px;margin: 10px 0 0 50%"/>
-  </a-card>
-  <br/>
-  <a-card title="游戏服务端口">
-    若无法在浏览器中访问本地游戏服务器请尝试修改端口，但是注意端口更改可能会导致丢失游戏进度！
-    <br/><br/>
-    <a-space>
-      <a-input v-model:value="port" style="width: 100%"/>
-      <a-button :type="oldPort==port?'default':'primary'" @click="restart">立即应用</a-button>
-    </a-space>
   </a-card>
   <br/>
   <a-card title="开发者工具">
@@ -251,6 +260,8 @@ async function onChangeBrowser(type: 'flash' | 'unity' | 'h5') {
     } else {
       browser.value.flash.name = "默认浏览器"
       browser.value.flash.p = ""
+      smartSniffing.value.enable = false
+      name = "默认浏览器"
     }
     browser.value.flash.node = getBrowserNode(name, flashBrowserList.value)
   } else if (type == 'unity') {
@@ -265,6 +276,7 @@ async function onChangeBrowser(type: 'flash' | 'unity' | 'h5') {
     } else {
       browser.value.unity.name = "默认浏览器"
       browser.value.unity.p = ""
+      name = "默认浏览器"
     }
     browser.value.unity.node = getBrowserNode(name, unityBrowserList.value)
   } else {
@@ -279,6 +291,7 @@ async function onChangeBrowser(type: 'flash' | 'unity' | 'h5') {
     } else {
       browser.value.h5.name = "默认浏览器"
       browser.value.h5.p = ""
+      name = "默认浏览器"
     }
     browser.value.h5.node = getBrowserNode(name, h5BrowserList.value)
   }
@@ -300,14 +313,14 @@ function validPort(): boolean {
   const p = port.value
   if (p < 1000 || p > 65535) {
     port.value = 3000
-    message.error("请保持端口处于1000-65535")
+    message.error("端口有效值范围：1000-65535")
     return false
   }
   return true
 }
 
 function checkSmartSniffing(): boolean {
-  if (!smartSniffing.value) return true
+  if (!smartSniffing.value.enable) return true
   //定义最终变量
   let arg
   //检查Flash浏览器

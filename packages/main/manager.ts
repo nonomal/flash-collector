@@ -10,8 +10,7 @@ import express from 'express'
 import {getConfig, setConfig} from "./config";
 import Ajv from "ajv";
 import infoSchema from "./schema/info.json"
-
-const shelljs = require('shelljs')
+import shelljs from "shelljs";
 
 const LOCAL_GAME_LIBRARY = "./games"
 
@@ -142,21 +141,28 @@ async function parser(url: string): Promise<Result<GameInfo, string>> {
     }
     if (regNode == null) return new Err("Error:Can't find parser for this url")
 
+    //封装getID函数
+    const getID = (url: string): string => {
+        const res = regNode!.utils.parseID(url)
+        if (res.ok) return res.val
+        else {
+            return (new URL(url)).pathname
+        }
+    }
+
     //遍历list查询此游戏是否被下载了
-    let found: GameInfo | null = null, thisID = regNode.utils.parseID(url).unwrap()
+    let thisID = getID(url),
+        found: GameInfo | null = null;
     for (let type in gameList) {
         for (let game of gameList[type]) {
             if (game.fromSite == regNode.name) {
-                let idRes = regNode.utils.parseID(game.online.originPage)
-                if (idRes.err) {
-                    console.log(`Warning:Fatal, can't parse id for local game ${type}/${game.local?.folder} with module ${regNode.name}`)
-                } else if (idRes.val == thisID) {
+                if (getID(game.online.originPage) == thisID) {
                     found = game
                     break
                 }
+                }
             }
         }
-    }
     if (found != null) {
         return new Ok(found)
     } else {

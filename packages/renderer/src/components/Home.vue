@@ -86,19 +86,38 @@
       </a-col>
     </a-row>
 
-    <div class="flex-container" style="margin-top: 10%">
-      <a-space v-for="item of cookieStatus" class="status-bar" size="middle">
-        {{ item.name }}：{{ item.login ? item.nickName : "未登录" }}
-        <template v-if="item.login">
-          <check-circle-outlined style="color: #42b983"/>
-          <a-button size="small" @click="logout(item.name)">登出</a-button>
-        </template>
-        <template v-else>
-          <close-circle-outlined style="color: gray"/>
-          <a-button size="small" @click="login(item.name)">登录</a-button>
-        </template>
-      </a-space>
-    </div>
+    <a-row style="margin-top: 20px" type="flex">
+      <a-col :span="2"/>
+      <a-col :span="20">
+        <a-collapse v-model:activeKey="statusBarActiveKey" expandIconPosition="right" ghost
+                    style="width: 100%;margin-left:-15px">
+          <a-collapse-panel key="main">
+            <template #header>
+              <strong>登录状态（{{ cookieStatus.filter(n => n.login).length }}/{{ cookieStatus.length }}）</strong>
+            </template>
+            <div style="display: flex;justify-content: center;width: 100%">
+              <table style="width: 50%;text-align: center">
+                <template v-for="item of cookieStatus">
+                  <tr style="height: 40px">
+                    <td>{{ item.name }}</td>
+                    <td>
+                      <a-tag :color="item.login?'cyan':'gray'">
+                        {{ item.login ? item.nickName : "未登录" }}
+                      </a-tag>
+                    </td>
+                    <td>
+                      <a-button v-if="item.login" size="small" @click="logout(item.name)">登出</a-button>
+                      <a-button v-else size="small" type="primary" @click="login(item.name)">登录</a-button>
+                    </td>
+                  </tr>
+                </template>
+              </table>
+
+            </div>
+          </a-collapse-panel>
+        </a-collapse>
+      </a-col>
+    </a-row>
 
   </div>
 </template>
@@ -109,7 +128,6 @@ import {clipboard, shell} from "electron";
 import {Option, Result} from "ts-results";
 import {Config, GameInfo, LoginStatus} from "../../../class";
 import {message, Modal} from 'ant-design-vue';
-import {CheckCircleOutlined, CloseCircleOutlined} from '@ant-design/icons-vue';
 import {bus} from "../eventbus";
 import bridge from "../bridge";
 import {getConfig} from "../config";
@@ -127,7 +145,8 @@ let url = ref<string>(""),
     cookieStatus = ref<LoginStatus[]>([]),
     localSearch = ref<GameInfo[]>([]),
     port = ref(3000),
-    recentLaunch = ref<{ info: GameInfo, freq: number }[]>([])
+    recentLaunch = ref<{ info: GameInfo, freq: number }[]>([]),
+    statusBarActiveKey = ref([])
 
 
 let gameInfo: GameInfo | null = null,
@@ -294,6 +313,7 @@ async function parse() {
     message.error(result.val)
     //清空gameInfo
     gameInfo = null
+    gameTitle.value = null
   }
 }
 
@@ -370,6 +390,10 @@ onUnmounted(() => {
 .status-bar {
   margin-top: 5px;
   margin-bottom: 5px;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
 }
 
 .flex-container {

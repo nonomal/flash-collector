@@ -4,7 +4,7 @@ import {GameInfo} from '../../class';
 import {BrowserWindow} from 'electron';
 import iconv from 'iconv-lite';
 import cheerio from 'cheerio';
-import GBKEncodeUri from "./GBKEncodeUri";
+import {GBKDecodeUri, GBKEncodeUri} from "./GBKUri";
 
 let cookie: string | null = null
 let updateCookie: (cookie: string) => void
@@ -108,6 +108,15 @@ async function fetch(url: string, referer: string): Promise<string> {
     return iconv.encode(str, 'UTF8').toString()
 }
 
+const fullUrl=(raw:string)=>{
+    if(raw.startsWith('//')){
+        return `https:${raw}`
+    }else if (raw.startsWith('/')){
+        return `https://www.4399.com${raw}`
+    }
+    return undefined
+}
+
 async function entrance(url: string): Promise<Result<GameInfo, string>> {
     return new Promise(async (resolve) => {
         //检查cookie是否为空
@@ -163,11 +172,15 @@ async function entrance(url: string): Promise<Result<GameInfo, string>> {
         if (m == null) {
             //加入pvz补丁
             let pvzPatchRes = await pvzPatch(originPage, {title, category, id})
-            if (pvzPatchRes.err) {
-                resolve(new Err("Error:Can't parse playing page"))
-                return
-            } else {
+            if (pvzPatchRes.ok) {
                 resolve(pvzPatchRes)
+                return
+            }
+            // 也有可能当前页就是真实页面
+            if (originPage.match(/_strGamePath\s*=\s*".*"/)?.length) {
+                m = [`/flash/${id}.htm`]
+            } else {
+                resolve(new Err("Error:Can't parse playing page"))
                 return
             }
         }
@@ -193,7 +206,7 @@ async function entrance(url: string): Promise<Result<GameInfo, string>> {
         }
         let webServer = m[0].split('"')[1]
         if (webServer.slice(0, 2) == "//") webServer = "http:" + webServer
-        // console.log(webServer)
+        // console.log('webServer',webServer)
 
         //匹配真实页面路径
         m = page.match(/_strGamePath\s*=\s*".*"/)
@@ -201,7 +214,9 @@ async function entrance(url: string): Promise<Result<GameInfo, string>> {
             resolve(new Err("Error:Can't match true game page"))
             return
         }
-        const trueUrl = webServer + m[0].split('"')[1]
+        let strGamePath = m[0].split('"')[1]
+        if (strGamePath.startsWith('//')) strGamePath = 'http:' + strGamePath
+        const trueUrl = strGamePath.startsWith('http') ? strGamePath : webServer + strGamePath
         console.log('trueUrl:' + trueUrl)
 
         //匹配二进制文件
@@ -364,20 +379,30 @@ function getNickName(cookie: string): Result<string, string> {
         if (m == null) {
             return new Err("Error:Can't match nick name")
         } else {
-            return new Ok(decodeURI(m[0].split(/[=;]/)[1]))
+            return new Ok(GBKDecodeUri(m[0].split(/[=;]/)[1]))
         }
     }
-    return new Ok(decodeURI(m[0].split(/[=;]/)[1]))
+    return new Ok(GBKDecodeUri(m[0].split(/[=;]/)[1]))
 }
 
 //4399pvz专题页面的补丁函数
 async function pvzPatch(page: string, known: { title: string, category: string, id: string }): Promise<Result<GameInfo, null>> {
+    const {title, category} = known
     const url = `http://www.4399.com/flash/${known.id}.htm`
     //查找iframe元素
     let match = page.match(/<iframe.+\.htm.+<\/iframe>/)
-    if (match == null) return new Err(null)
-    const truePageUrl = "https:" + match[0].match(/\/\/.+\.htm/)![0]
-    // console.log(truePageUrl);
+    if (!match?.length) {
+        return new Err(null)
+    }
+    const src=match[0].match(/\/.+\.htm/)?.[0]
+    if(!src){
+        return new Err(null)
+    }
+    const truePageUrl = fullUrl(src)
+    if(!truePageUrl){
+        return new Err(null)
+    }
+    // console.log('truePageUrl',truePageUrl);
 
     //获取真实页面。匹配swf文件名
     const truePage = await fetch(truePageUrl, url)
@@ -394,7 +419,8 @@ async function pvzPatch(page: string, known: { title: string, category: string, 
 
     //返回结果
     return new Ok({
-        ...known,
+        title,
+        category,
         type: "flash",
         fromSite: "4399",
         online: {
